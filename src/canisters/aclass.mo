@@ -3,12 +3,17 @@
 import D "mo:base/Debug";
 import Text "mo:base/Text";
 import Principal "mo:base/Principal";
+import ClassPlusLib "../";
 
 
 module {
 
   public type State = {
-    message: Text;
+    var message: Text;
+  };
+
+  public type InitArgs = {
+    messageModifier: Text;
   };
 
   public type Environment = {
@@ -17,31 +22,74 @@ module {
     };
   };
 
-  /// Function to create an initial state for the Approval ICRC37 management.
-  public let initialState : State = {
-    message = "Hello World!";
+  public func initialState() : State = {
+    var message = "Uninitialized";
   };
 
-  /// Current ID Version of the Library, used for Migrations
-  public let currentStateVersion = #v0_1_0(#id);
+  //////////
+  // The following boilerplate can be added your classes to save
+  // significant lines of code
+  //////////
+  public type ClassPlus = ClassPlusLib.ClassPlus<AClass, 
+    State,
+    InitArgs,
+    Environment>;
+
+  public func ClassPlusGetter(item: ?ClassPlus) : () -> AClass {
+    ClassPlusLib.ClassPlusGetter<AClass, State, InitArgs, Environment>(item);
+  };
 
 
-  public class AClass(stored: ?State, caller: Principal, canister: Principal, _environment: ?Environment){
+  
+
+  public func Init<system>(config : {
+      manager: ClassPlusLib.ClassPlusInitializationManager;
+      initialState: State;
+      args : ?InitArgs;
+      pullEnvironment : ?(() -> Environment);
+      onInitialize: ?(AClass -> async*());
+      onStorageChange : ((State) ->())
+    }) :()-> AClass{
+
+      ClassPlusLib.ClassPlus<system,
+        AClass, 
+        State,
+        InitArgs,
+        Environment>({config with constructor = AClass}).get;
+    };
+
+  
+
+  public class AClass(stored: ?State, caller: Principal, canister: Principal, args: ?InitArgs, _environment: ?Environment, onStateChange: (State) -> ()){
 
     public let state = switch(stored){
       case(?val) val;
-      case(null) initialState;
+      case(null) initialState() : State;
     };
 
-    func getEnvironment() : Environment {
-      switch(_environment){
-        case(?val) val;
-        case(null) D.trap("No Environment Set");
+    onStateChange(state);
+
+    let environment : Environment = switch(_environment){
+      case(?val) val;
+      case(null) D.trap("No Environment Set");
+    };
+
+    switch(args){
+      case(?val) {
+        if(state.message == "Uninitialized" ){
+          state.message := val.messageModifier;
+        };
       };
+      case(null) {};
     };
 
     public func message() : Text {
-      state.message # " from canister " # Principal.toText(Principal.fromActor(getEnvironment().thisActor)) # " and " # Principal.toText(canister) # " created by " # Principal.toText(caller);
+      state.message # " from canister " # Principal.toText(Principal.fromActor(environment.thisActor)) # " and " # Principal.toText(canister) # " created by " # Principal.toText(caller);
+    };
+
+    public func setMessage(x: Text) : () {
+      state.message := x;
+
     };
 
   };

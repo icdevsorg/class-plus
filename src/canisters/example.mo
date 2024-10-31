@@ -1,4 +1,4 @@
-import AClass "aclass";
+import AClassLib "aclass";
 import D "mo:base/Debug";
 import ClassPlus "../";
 
@@ -8,35 +8,38 @@ import Timer "mo:base/Timer";
 
 shared ({ caller = _owner }) actor class Token  () = this{
 
-  let initManager = ClassPlus.ClassPlusInitializationManager();
+  type AClass = AClassLib.AClass;
+  type State = AClassLib.State;
+  type InitArgs = AClassLib.InitArgs;
+  type Environment = AClassLib.Environment;
 
-  stable let aClass_state : AClass.State = AClass.initialState;
+  let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this));
 
-  let aClass = ClassPlus.ClassPlus<system,
-    AClass.AClass, 
-    AClass.State,
-    AClass.Environment>(
-      _owner,
-      actor(Principal.toText(Principal.fromActor(this))), 
-      aClass_state, 
-      AClass.AClass,
-      initManager,
-      // set up any enviornment settings here
-      ?(func() : AClass.Environment {
-        {
-          thisActor = actor(Principal.toText(Principal.fromActor(this)));
-          //bClass = func() : AClass.AClass{bClass()};
-        };
-      }),
-      //any initialization code
-      ?(func () : async* () {
+  stable var aClass_state : State = AClassLib.initialState();
+
+  let aClass = AClassLib.Init<system>({
+    manager = initManager;
+    initialState = aClass_state;
+    args = ?({messageModifier = "Hello World"});
+    pullEnvironment = ?(func() : Environment {
+      {
+        thisActor = actor(Principal.toText(Principal.fromActor(this)));
+      };
+    });
+    onInitialize = ?(func (newClass: AClassLib.AClass) : async* () {
+        //_aClass := ?newClass;
         D.print("Initializing AClass");
-        //do any work here necessary for initialization
-      })
-    ).get;
-
+      });
+    onStorageChange = func(new_state: State) {
+        aClass_state := new_state;
+      } 
+  });
 
   public shared func getMessage() : async Text {
     aClass().message();
+  };
+
+  public shared func SetMessage(x: Text) : async () {
+    aClass().setMessage(x);
   }
 };
