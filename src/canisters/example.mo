@@ -13,7 +13,7 @@ shared ({ caller = _owner }) actor class Token  () = this{
   type InitArgs = AClassLib.InitArgs;
   type Environment = AClassLib.Environment;
 
-  let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this));
+  let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this), true);
 
   stable var aClass_state : State = AClassLib.initialState();
 

@@ -20,11 +20,12 @@ module{
 
   public type ClassPlusInitList = [() -> ()];
 
-  public class ClassPlusInitializationManager(_owner : Principal, _canister : Principal) {
+  public class ClassPlusInitializationManager(_owner : Principal, _canister : Principal, autoTimer: Bool) {
     public var timer: ?Nat = null;
     public let calls = Buffer.Buffer<() -> async* ()>(1);
     public let owner = _owner;
     public let canister = _canister;
+    public let auto = autoTimer;
     public func initialize() : async* (){
        for(init in calls.vals()){
           await* init();
@@ -40,6 +41,8 @@ module{
       };
     };
   };
+
+
 
   public func BuildInit<system, T, S, A, E >(Constructor:  ((?S, Principal, Principal, ?A, ?E, ((S)->())) -> T)) : (<system>({
       manager: ClassPlusInitializationManager;
@@ -77,6 +80,12 @@ module{
       onStorageChange : ((S) -> ());
     }) {
 
+      D.print("Class Plus Constructor");
+      switch(config.pullEnvironment){
+        case(?val) D.print("Pull Environment Set");
+        case(null) D.print("Pull Environment Not Set");
+      };
+
     let caller = config.manager.owner;
     let canister = config.manager.canister;
 
@@ -87,7 +96,7 @@ module{
       _thisEnvironment := ?x;
     };
 
-    public func getEnvironment() : E {
+    public func getEnvironment() : ?E {
       switch(_thisEnvironment){
         case(null){
           switch(config.pullEnvironment){
@@ -96,11 +105,11 @@ module{
               getEnvironment();
             };
             case(null){
-              D.trap("No Environment Set");
+              null;
             };
           };
         };
-        case(?val) val;
+        case(?val) ?val;
       };
     };
 
@@ -127,7 +136,7 @@ module{
     public func get() : T {
       switch(_value){
         case(null){
-          let value = config.constructor(?config.initialState, caller, canister, config.args, _thisEnvironment, config.onStorageChange);
+          let value = config.constructor(?config.initialState, caller, canister, config.args, getEnvironment(), config.onStorageChange);
           _value := ?value;
           value;
         };
@@ -137,13 +146,15 @@ module{
 
     public let tracker = config.manager;
 
-    switch(tracker.timer){
-      case(null){
-          tracker.timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
-          await* tracker.initialize();
-        });
+    if(tracker.auto){
+      switch(tracker.timer){
+        case(null){
+            tracker.timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
+            await* tracker.initialize();
+          });
+        };
+        case(_){};
       };
-      case(_){};
     };
 
     tracker.calls.add(initialize)
