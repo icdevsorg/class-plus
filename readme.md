@@ -190,12 +190,14 @@ Handles initialization and tracking of ClassPlus objects.
 
 - Members
 
-  - calls: Buffer.Buffer(() ->async\*()
+  - calls: Buffer.Buffer(() ->async\*())
     - queue up functions to call during initialization by adding them to the calls buffer. They will be executed in the order you add them.
 
 #### **`ClassPlus`**
 
 Encapsulates logic for creating and managing a class instance.
+
+`public class AClass<system>(stored: ?State, caller: Principal, canister: Principal, args: ?InitArgs, _environment: ?Environment, onStateChange: (State) -> ())`
 
 - **Constructor**: `ClassPlus<system, T, S, A, E>(config: {...})`
 
@@ -218,6 +220,10 @@ Encapsulates logic for creating and managing a class instance.
   - `getEnvironment(): ?E`
     - Retrieves the environment, initializing it if necessary.
 
+#### **`ClassPlusSystem`**
+
+Same as `ClassPlus` but with a system constructor
+
 ### **Helper Functions**
 
 #### **`ClassPlusGetter`**
@@ -226,6 +232,14 @@ Simplifies retrieval of a class instance.
 
 ```motoko
 public func ClassPlusGetter<T, S, A, E>(x: ?ClassPlus<T, S, A, E>): () -> T;
+```
+
+#### **`ClassPlusSystemGetter`**
+
+Simplifies retrieval of a class instance that has a system constructor.
+
+```motoko
+public func ClassPlusSystemGetter<T, S, A, E>(x: ?ClassPlus<T, S, A, E>): <system>() -> T;
 ```
 
 #### **`BuildInit`**
