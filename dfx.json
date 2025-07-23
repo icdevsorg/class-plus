@@ -4,6 +4,10 @@
         "example": {
             "type": "motoko",
             "main": "src/canisters/example.mo"
+        },
+         "system": {
+            "type": "motoko",
+            "main": "src/canisters/systemExample.mo"
         }
     },
     "defaults": {

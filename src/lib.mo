@@ -18,6 +18,8 @@ import Timer "mo:base/Timer";
 
 module{
 
+  let debug_channel = false;
+
   public type ClassPlusInitList = [() -> ()];
 
   public class ClassPlusInitializationManager(_owner : Principal, _canister : Principal, autoTimer: Bool) {
@@ -37,6 +39,15 @@ module{
     func () : T {
       switch(x){
         case(?val) val.get();
+        case(null) D.trap("No Value Set");
+      };
+    };
+  };
+
+  public func ClassPlusSystemGetter<system, T,S,A,E>(x: ?ClassPlusSystem<T,S,A,E>) : <system>() -> T {
+    func <system>() : T {
+      switch(x){
+        case(?val) val.get<system>();
         case(null) D.trap("No Value Set");
       };
     };
@@ -80,10 +91,10 @@ module{
       onStorageChange : ((S) -> ());
     }) {
 
-      D.print("Class Plus Constructor");
+      debug if(debug_channel) D.print("Class Plus Constructor");
       switch(config.pullEnvironment){
-        case(?val) D.print("Pull Environment Set");
-        case(null) D.print("Pull Environment Not Set");
+        case(?_) debug if(debug_channel)D.print("Pull Environment Set");
+        case(null) debug if(debug_channel) D.print("Pull Environment Not Set");
       };
 
     let caller = config.manager.owner;
@@ -137,6 +148,97 @@ module{
       switch(_value){
         case(null){
           let value = config.constructor(?config.initialState, caller, canister, config.args, getEnvironment(), config.onStorageChange);
+          _value := ?value;
+          value;
+        };
+        case(?val) val;
+      };
+    };
+
+    public let tracker = config.manager;
+
+    if(tracker.auto){
+      switch(tracker.timer){
+        case(null){
+            tracker.timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
+            await* tracker.initialize();
+          });
+        };
+        case(_){};
+      };
+    };
+
+    tracker.calls.add(initialize)
+  };
+
+  //constructor
+  public class ClassPlusSystem<system, T, S, A, E>(config: {//ClassType, StateType, ArgsType, EnvironmentType, 
+      manager: ClassPlusInitializationManager;
+      initialState: S;
+      constructor: (<system>(?S, Principal, Principal, ?A, ?E, ((S)->())) -> T);
+      args: ?A;
+      pullEnvironment: ?(() -> E);
+      onInitialize : ?((T) -> async*());
+      onStorageChange : ((S) -> ());
+    }) {
+
+      debug if(debug_channel)D.print("Class Plus System Constructor");
+      switch(config.pullEnvironment){
+        case(?_) debug if(debug_channel)D.print("Pull Environment Set");
+        case(null) debug if(debug_channel) D.print("Pull Environment Not Set");
+      };
+
+    let caller = config.manager.owner;
+    let canister = config.manager.canister;
+
+    var _value : ?T = null;
+    var _thisEnvironment : ?E = null;
+
+    public func setEnvironment(x : E) : (){
+      _thisEnvironment := ?x;
+    };
+
+    public func getEnvironment() : ?E {
+      switch(_thisEnvironment){
+        case(null){
+          switch(config.pullEnvironment){
+            case(?val){
+              setEnvironment(val());
+              getEnvironment();
+            };
+            case(null){
+              null;
+            };
+          };
+        };
+        case(?val) ?val;
+      };
+    };
+
+    //todo...can maybe remove
+    public func getState() : S{
+      config.initialState;
+    };
+
+    public func initialize() : async* (){
+      switch(config.pullEnvironment){
+        case(?val) setEnvironment(val());
+        case(_){};
+      };
+
+      let thisClass = get(); //forces construction
+      
+      switch(config.onInitialize){
+        case(?val) await* val(thisClass);
+        case(null) {};
+      };
+      return
+    };
+
+    public func get<system>() : T {
+      switch(_value){
+        case(null){
+          let value = config.constructor<system>(?config.initialState, caller, canister, config.args, getEnvironment(), config.onStorageChange);
           _value := ?value;
           value;
         };

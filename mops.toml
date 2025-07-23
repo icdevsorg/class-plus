@@ -1,5 +1,5 @@
 [dependencies]
-base = "0.13.0"
+base = "0.14.14"
 
 [dev-dependencies]
 test = "2.0.0"
@@ -7,7 +7,7 @@ fuzz = "0.2.1"
 
 [package]
 name = "class-plus"
-version = "0.0.1"
+version = "0.0.2"
 description = "Class Plus Helper"
 repository = "https://github.com/icdevsorg/class-plus"
 keywords = [ "class", "motoko", "helper" ]
