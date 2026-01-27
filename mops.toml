@@ -1,5 +1,5 @@
 [dependencies]
-base = "0.14.14"
+core = "2.0.0"
 
 [dev-dependencies]
 test = "2.0.0"
@@ -7,7 +7,10 @@ fuzz = "0.2.1"
 
 [package]
 name = "class-plus"
-version = "0.0.2"
-description = "Class Plus Helper"
+version = "0.1.0"
+description = "Class Plus Helper - Initialization patterns and mixins for Motoko actors"
 repository = "https://github.com/icdevsorg/class-plus"
-keywords = [ "class", "motoko", "helper" ]
+keywords = [ "class", "motoko", "helper", "mixin", "initialization" ]
+
+[toolchain]
+moc = "1.1.0"

@@ -1,9 +1,10 @@
 
 
-import D "mo:base/Debug";
-import Text "mo:base/Text";
-import Principal "mo:base/Principal";
-import Timer "mo:base/Timer";
+import Runtime "mo:core/Runtime";
+import Debug "mo:core/Debug";
+import Text "mo:core/Text";
+import Principal "mo:core/Principal";
+import Timer "mo:core/Timer";
 import ClassPlusLib "../";
 
 
@@ -73,7 +74,7 @@ module {
 
     let environment : Environment = switch(_environment){
       case(?val) val;
-      case(null) D.trap("No Environment Set");
+      case(null) Runtime.trap("No Environment Set");
     };
 
     switch(args){
@@ -95,7 +96,7 @@ module {
     };
 
     ignore Timer.setTimer<system>(#seconds(1), func() : async () {
-      D.print("Timer Triggered");
+      Debug.print("Timer Triggered");
     
     });
 

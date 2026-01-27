@@ -1,8 +1,8 @@
 
 
-import D "mo:base/Debug";
-import Text "mo:base/Text";
-import Principal "mo:base/Principal";
+import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
+import Principal "mo:core/Principal";
 import ClassPlusLib "../";
 
 
@@ -71,7 +71,7 @@ module {
 
     let environment : Environment = switch(_environment){
       case(?val) val;
-      case(null) D.trap("No Environment Set");
+      case(null) Runtime.trap("No Environment Set");
     };
 
     switch(args){

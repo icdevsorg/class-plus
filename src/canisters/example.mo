@@ -1,23 +1,22 @@
 import AClassLib "aclass";
-import D "mo:base/Debug";
+import Debug "mo:core/Debug";
 import ClassPlus "../";
 
-import Principal "mo:base/Principal";
-import Timer "mo:base/Timer";
+import Principal "mo:core/Principal";
 
 
-shared ({ caller = _owner }) actor class Token  () = this{
+shared ({ caller = _owner }) persistent actor class Token  () = this{
 
   type AClass = AClassLib.AClass;
   type State = AClassLib.State;
   type InitArgs = AClassLib.InitArgs;
   type Environment = AClassLib.Environment;
 
-  let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this), true);
+  transient let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this), true);
 
-  stable var aClass_state : State = AClassLib.initialState();
+  var aClass_state : State = AClassLib.initialState();
 
-  let aClass = AClassLib.Init<system>({
+  transient let aClass = AClassLib.Init<system>({
     manager = initManager;
     initialState = aClass_state;
     args = ?({messageModifier = "Hello World"});
@@ -26,9 +25,8 @@ shared ({ caller = _owner }) actor class Token  () = this{
         thisActor = actor(Principal.toText(Principal.fromActor(this)));
       };
     });
-    onInitialize = ?(func (newClass: AClassLib.AClass) : async* () {
-        //_aClass := ?newClass;
-        D.print("Initializing AClass");
+    onInitialize = ?(func (_newClass: AClassLib.AClass) : async* () {
+        Debug.print("Initializing AClass");
       });
     onStorageChange = func(new_state: State) {
         aClass_state := new_state;

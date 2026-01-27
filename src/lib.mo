@@ -11,10 +11,11 @@
 //
 /////
 
-import D "mo:base/Debug";
-import Principal "mo:base/Principal";
-import Buffer "mo:base/Buffer";
-import Timer "mo:base/Timer";
+import Debug "mo:core/Debug";
+import Runtime "mo:core/Runtime";
+import Principal "mo:core/Principal";
+import List "mo:core/List";
+import Timer "mo:core/Timer";
 
 module{
 
@@ -24,12 +25,12 @@ module{
 
   public class ClassPlusInitializationManager(_owner : Principal, _canister : Principal, autoTimer: Bool) {
     public var timer: ?Nat = null;
-    public let calls = Buffer.Buffer<() -> async* ()>(1);
+    public let calls = List.empty<() -> async* ()>();
     public let owner = _owner;
     public let canister = _canister;
     public let auto = autoTimer;
     public func initialize() : async* (){
-       for(init in calls.vals()){
+       for(init in calls.values()){
           await* init();
         };
     };
@@ -39,7 +40,7 @@ module{
     func () : T {
       switch(x){
         case(?val) val.get();
-        case(null) D.trap("No Value Set");
+        case(null) Runtime.trap("No Value Set");
       };
     };
   };
@@ -48,7 +49,7 @@ module{
     func <system>() : T {
       switch(x){
         case(?val) val.get<system>();
-        case(null) D.trap("No Value Set");
+        case(null) Runtime.trap("No Value Set");
       };
     };
   };
@@ -91,10 +92,10 @@ module{
       onStorageChange : ((S) -> ());
     }) {
 
-      debug if(debug_channel) D.print("Class Plus Constructor");
+      debug if(debug_channel) Debug.print("Class Plus Constructor");
       switch(config.pullEnvironment){
-        case(?_) debug if(debug_channel)D.print("Pull Environment Set");
-        case(null) debug if(debug_channel) D.print("Pull Environment Not Set");
+        case(?_) debug if(debug_channel) Debug.print("Pull Environment Set");
+        case(null) debug if(debug_channel) Debug.print("Pull Environment Not Set");
       };
 
     let caller = config.manager.owner;
@@ -182,10 +183,10 @@ module{
       onStorageChange : ((S) -> ());
     }) {
 
-      debug if(debug_channel)D.print("Class Plus System Constructor");
+      debug if(debug_channel) Debug.print("Class Plus System Constructor");
       switch(config.pullEnvironment){
-        case(?_) debug if(debug_channel)D.print("Pull Environment Set");
-        case(null) debug if(debug_channel) D.print("Pull Environment Not Set");
+        case(?_) debug if(debug_channel) Debug.print("Pull Environment Set");
+        case(null) debug if(debug_channel) Debug.print("Pull Environment Not Set");
       };
 
     let caller = config.manager.owner;
@@ -226,7 +227,7 @@ module{
         case(_){};
       };
 
-      let thisClass = get(); //forces construction
+      let thisClass = get<system>(); //forces construction
       
       switch(config.onInitialize){
         case(?val) await* val(thisClass);
