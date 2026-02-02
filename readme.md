@@ -7,6 +7,7 @@ A Motoko library designed to reduce boilerplate when instantiating and managing 
 ## Requirements
 
 - **DFX Version**: Requires DFX 0.24.0 or later.
+- **Motoko Version**: Requires Motoko 1.1.0 or later for enhanced orthogonal persistence and migration support.
 
 ---
 
@@ -21,6 +22,7 @@ ClassPlus simplifies the process of defining and managing objects in actor class
 1. **Reducing Boilerplate**: It minimizes repetitive code for constructing and maintaining objects.
 2. **Supporting Upgrades**: Ensures objects can be reconstituted from stable variables after an upgrade.
 3. **Encapsulating Complexity**: Provides a unified interface for initialization, state management, and environment configuration.
+4. **Migration Support**: Works seamlessly with Motoko's new explicit migration pattern for state evolution.
 
 ClassPlus objects are instantiated with a predefined structure and integrate seamlessly into actor classes.
 
@@ -135,7 +137,7 @@ shared ({ caller = _owner }) actor class Token () = this {
     stable var aClass_state: State = AClassLib.initialState();
 
     let aClass = AClassLib.Init<system>({
-        manager = initManager;
+        org_icdevs_class_plus_manager = initManager;
         initialState = aClass_state;
         args = ?({ messageModifier = "Hello World" });
         pullEnvironment = ?(func() : Environment {
@@ -165,6 +167,199 @@ shared ({ caller = _owner }) actor class Token () = this {
 
     initManager.calls.add(initStuff);
 };
+```
+
+---
+
+## State Migration with ClassPlus
+
+Motoko's enhanced orthogonal persistence (available in Motoko 1.1.0+) provides a powerful migration pattern for evolving your class state across upgrades. This section explains how to use ClassPlus with the new migration syntax.
+
+### Why Migration?
+
+When you need to change the structure of your State type (adding fields, changing types, or reorganizing data), you need to tell Motoko how to transform the old state into the new state. Without migration, incompatible state changes will cause upgrades to fail.
+
+### The Migration Pattern
+
+The migration pattern uses a migration function that:
+- **Consumes** specific fields from the old actor state
+- **Produces** specific fields for the new actor state
+- Is **selective** - fields not mentioned are preserved automatically
+
+### Step-by-Step Migration Guide
+
+#### Step 1: Define the Old and New State Types
+
+First, define both the old state type (what you're migrating FROM) and the new state type (what you're migrating TO) in a migration module:
+
+```motoko
+// Migration.mo
+import Time "mo:core/Time";
+
+module Migration {
+
+  // Old state type from v1
+  public type OldState = {
+    var message: Text;
+    var counter: Nat;
+  };
+
+  // New state type for v2 - adds new fields
+  public type NewState = {
+    var message: Text;
+    var counter: Nat;
+    var lastUpdated: Int;    // NEW field
+    var version: Text;       // NEW field
+  };
+
+  // Migration function
+  public func migration(old : { var myClass_state : OldState }) : { var myClass_state : NewState } {
+    {
+      var myClass_state : NewState = {
+        var message = old.myClass_state.message;    // Preserve message
+        var counter = old.myClass_state.counter;    // Preserve counter
+        var lastUpdated = Time.now();               // Initialize new field
+        var version = "v2-migrated";                // Initialize new field
+      };
+    };
+  };
+
+};
+```
+
+#### Step 2: Update Your Class Module
+
+Create the v2 version of your class module with the new State type:
+
+```motoko
+// MyClass_v2.mo
+module {
+
+  public type State = {
+    var message: Text;
+    var counter: Nat;
+    var lastUpdated: Int;    // NEW
+    var version: Text;       // NEW
+  };
+
+  public func initialState() : State = {
+    var message = "Uninitialized";
+    var counter = 0;
+    var lastUpdated = 0;
+    var version = "v2";
+  };
+
+  // ... rest of ClassPlus boilerplate and class implementation
+};
+```
+
+#### Step 3: Add Migration to Your Actor
+
+Use the `(with migration)` syntax before your actor declaration:
+
+```motoko
+// MyActor_v2.mo
+import MyClassLib "MyClass_v2";
+import { migration } "Migration";
+import ClassPlus "mo:class-plus";
+import Principal "mo:core/Principal";
+
+(with migration)  // <-- This tells Motoko to run the migration function on upgrade
+shared ({ caller = _owner }) persistent actor class MyActor() = this {
+
+  type MyClass = MyClassLib.MyClass;
+  type State = MyClassLib.State;
+
+  transient let initManager = ClassPlus.ClassPlusInitializationManager<system>(
+    _owner, Principal.fromActor(this), true
+  );
+
+  // State variable - populated by migration on upgrade from v1
+  var myClass_state : State = MyClassLib.initialState();
+
+  transient let myClass = MyClassLib.Init({
+    org_icdevs_class_plus_manager = initManager;
+    initialState = myClass_state;
+    args = ?({ messageModifier = "Hello World v2" });
+    pullEnvironment = ?(func() : Environment { /* ... */ });
+    onInitialize = null;
+    onStorageChange = func(new_state: State) {
+      myClass_state := new_state;
+    };
+  });
+
+  // ... public methods
+};
+```
+
+### Important Migration Considerations
+
+#### 1. Selective Migration
+
+The migration function only needs to specify fields that are being transformed. Fields not mentioned are handled automatically:
+
+```motoko
+// If you have multiple stable variables:
+persistent actor {
+  var myClass_state : State = ...;     // Needs migration (type changed)
+  var otherData : Nat = 0;             // No migration needed (preserved automatically)
+}
+
+// Migration only mentions myClass_state:
+func migration(old : { var myClass_state : OldState }) : { var myClass_state : NewState } {
+  // otherData is preserved automatically!
+  { var myClass_state = ... }
+};
+```
+
+#### 2. Post-Migration Upgrades
+
+After the initial migration (v1 → v2), subsequent upgrades (v2 → v2) should NOT use the migration function because:
+- The migration function expects the OLD state format
+- v2 state is already in the NEW format
+
+**Solution**: Create a post-migration version without the `(with migration)` declaration:
+
+```motoko
+// MyActor_v2_post.mo - For upgrades AFTER migration is complete
+shared ({ caller = _owner }) persistent actor class MyActor() = this {
+  // Same code as v2, but WITHOUT (with migration)
+  var myClass_state : State = MyClassLib.initialState();
+  // ...
+};
+```
+
+#### 3. Migration Workflow
+
+1. **v1 deployed** - Original version running in production
+2. **v1 → v2 (with migration)** - Deploy v2 with migration function
+3. **v2 → v2_post** - Deploy post-migration version (removes migration code)
+4. **v2_post → v2_post** - Future upgrades use the same version
+
+### Complete Migration Example
+
+See the `src/canisters/` directory for a complete working example:
+
+- `migratableClass_v1.mo` - Initial class with basic state
+- `migratableClass_v2.mo` - Updated class with new fields
+- `migratableExampleMigration.mo` - Migration function
+- `migratableExample_v1.mo` - v1 actor
+- `migratableExample_v2.mo` - v2 actor with migration
+- `migratableExample_v2_post.mo` - v2 actor for post-migration upgrades
+
+### Testing Migrations
+
+The `pic/` directory contains PocketIC tests that verify:
+- State persistence across same-version upgrades
+- Proper state migration from v1 to v2
+- New field initialization during migration
+- Post-migration upgrade compatibility
+
+Run tests with:
+```bash
+cd pic
+npm install
+npm test
 ```
 
 ---
@@ -258,8 +453,29 @@ public func BuildInit<system, T, S, A, E>(Constructor: (...)): (...) -> ();
 - **Upgrade-Safe**: Ensures class objects can be reconstituted from stable variables.
 - **Modular and Organized**: Provides a clear structure for defining and managing classes.
 - **Automatic Initialization**: Built-in timer management simplifies initialization.
+- **Migration-Friendly**: Works seamlessly with Motoko's explicit migration pattern.
+
+---
+
+## Testing
+
+ClassPlus includes comprehensive PocketIC tests covering:
+- Basic initialization and state management
+- State persistence across upgrades
+- State migration between versions
+
+```bash
+# Build canisters
+dfx build --check
+
+# Run PIC tests
+cd pic
+npm install
+npm test
+```
 
 ---
 
 This library is ideal for projects requiring modular, upgrade-friendly object management in Motoko. By leveraging ClassPlus, developers can focus more on functionality and less on boilerplate code.
+
 

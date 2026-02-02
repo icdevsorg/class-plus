@@ -1,0 +1,6 @@
+type Token = 
+ service {
+   SetMessage: (x: text) -> ();
+   getMessage: () -> (text);
+ };
+service : () -> Token

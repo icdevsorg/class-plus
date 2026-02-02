@@ -45,7 +45,7 @@ module {
   
 
   public func Init<system>(config : {
-      manager: ClassPlusLib.ClassPlusInitializationManager;
+      org_icdevs_class_plus_manager: ClassPlusLib.ClassPlusInitializationManager;
       initialState: State;
       args : ?InitArgs;
       pullEnvironment : ?(() -> Environment);

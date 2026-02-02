@@ -5,9 +5,21 @@
             "type": "motoko",
             "main": "src/canisters/example.mo"
         },
-         "system": {
+        "system": {
             "type": "motoko",
             "main": "src/canisters/systemExample.mo"
+        },
+        "migratable_v1": {
+            "type": "motoko",
+            "main": "src/canisters/migratableExample_v1.mo"
+        },
+        "migratable_v2": {
+            "type": "motoko",
+            "main": "src/canisters/migratableExample_v2.mo"
+        },
+        "migratable_v2_post": {
+            "type": "motoko",
+            "main": "src/canisters/migratableExample_v2_post.mo"
         }
     },
     "defaults": {
@@ -16,5 +28,4 @@
             "args": ""
         }
     }
-    
 }

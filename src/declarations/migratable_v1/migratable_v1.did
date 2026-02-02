@@ -1,0 +1,23 @@
+type MigratableExample_v1 = 
+ service {
+   /// Get the counter
+   getCounter: () -> (nat);
+   /// Get the current message
+   getMessage: () -> (text);
+   /// Get full state info
+   getStateInfo: () -> (record {
+                          counter: nat;
+                          message: text;
+                        });
+   /// Get version - v1 doesn't have a version field, so we return a static string
+   getVersion: () -> (text);
+   /// Increment the counter
+   increment: () -> (nat);
+   /// Set a new message
+   setMessage: (x: text) -> ();
+ };
+/// Migratable Example v1 - Actor using ClassPlus with migratable state
+/// 
+/// This actor demonstrates the ClassPlus pattern with state that can be migrated.
+/// Deploy this first, add some data, then upgrade to migratableExample_v2.mo
+service : () -> MigratableExample_v1

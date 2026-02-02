@@ -23,7 +23,7 @@ module{
 
   public type ClassPlusInitList = [() -> ()];
 
-  public class ClassPlusInitializationManager(_owner : Principal, _canister : Principal, autoTimer: Bool) {
+  public class ClassPlusInitializationManager<system>(_owner : Principal, _canister : Principal, autoTimer: Bool) {
     public var timer: ?Nat = null;
     public let calls = List.empty<() -> async* ()>();
     public let owner = _owner;
@@ -33,6 +33,17 @@ module{
        for(init in calls.values()){
           await* init();
         };
+    };
+
+    if(auto){
+      switch(timer){
+        case(null){
+            timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
+            await* initialize();
+          });
+        };
+        case(_){};
+      };
     };
   };
 
@@ -56,8 +67,33 @@ module{
 
 
 
-  public func BuildInit<system, T, S, A, E >(Constructor:  ((?S, Principal, Principal, ?A, ?E, ((S)->())) -> T)) : (<system>({
-      manager: ClassPlusInitializationManager;
+  public func BuildInitSystem<system, T, S, A, E >(Constructor:  (<system>(?S, Principal, Principal, ?A, ?E, ((S)->())) -> T)) : (<system>({
+      org_icdevs_class_plus_manager: ClassPlusInitializationManager;
+      initialState: S;
+      args : ?A;
+      pullEnvironment : ?(() -> E);
+      onInitialize: ?(T -> async*());
+      onStorageChange : ((S) ->())
+    }) -> (<system>()-> T)) {
+
+      return func<system>(config: {
+        org_icdevs_class_plus_manager: ClassPlusInitializationManager;
+        initialState: S;
+        args : ?A;
+        pullEnvironment : ?(() -> E);
+        onInitialize: ?(T -> async*());
+        onStorageChange : ((S) ->())
+      }) : (<system>()-> T) {
+        ClassPlusSystem<system,
+          T, 
+          S,
+          A,
+          E>({config with constructor = Constructor}).get;
+      };
+  };
+
+  public func BuildInit<T, S, A, E >(Constructor:  ((?S, Principal, Principal, ?A, ?E, ((S)->())) -> T)) : (({
+      org_icdevs_class_plus_manager: ClassPlusInitializationManager;
       initialState: S;
       args : ?A;
       pullEnvironment : ?(() -> E);
@@ -65,15 +101,15 @@ module{
       onStorageChange : ((S) ->())
     }) -> (()-> T)) {
 
-      return func<system>(config: {
-        manager: ClassPlusInitializationManager;
+      return func(config: {
+        org_icdevs_class_plus_manager: ClassPlusInitializationManager;
         initialState: S;
         args : ?A;
         pullEnvironment : ?(() -> E);
         onInitialize: ?(T -> async*());
         onStorageChange : ((S) ->())
       }) : (()-> T) {
-        ClassPlus<system,
+        ClassPlus<
           T, 
           S,
           A,
@@ -82,8 +118,8 @@ module{
   };
 
   //constructor
-  public class ClassPlus<system, T, S, A, E>(config: {//ClassType, StateType, ArgsType, EnvironmentType, 
-      manager: ClassPlusInitializationManager;
+  public class ClassPlus<T, S, A, E>(config: {//ClassType, StateType, ArgsType, EnvironmentType, 
+      org_icdevs_class_plus_manager: ClassPlusInitializationManager;
       initialState: S;
       constructor: ((?S, Principal, Principal, ?A, ?E, ((S)->())) -> T);
       args: ?A;
@@ -98,8 +134,8 @@ module{
         case(null) debug if(debug_channel) Debug.print("Pull Environment Not Set");
       };
 
-    let caller = config.manager.owner;
-    let canister = config.manager.canister;
+    let caller = config.org_icdevs_class_plus_manager.owner;
+    let canister = config.org_icdevs_class_plus_manager.canister;
 
     var _value : ?T = null;
     var _thisEnvironment : ?E = null;
@@ -156,25 +192,14 @@ module{
       };
     };
 
-    public let tracker = config.manager;
+    public let tracker = config.org_icdevs_class_plus_manager;
 
-    if(tracker.auto){
-      switch(tracker.timer){
-        case(null){
-            tracker.timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
-            await* tracker.initialize();
-          });
-        };
-        case(_){};
-      };
-    };
-
-    tracker.calls.add(initialize)
+    List.add(tracker.calls,initialize);
   };
 
   //constructor
   public class ClassPlusSystem<system, T, S, A, E>(config: {//ClassType, StateType, ArgsType, EnvironmentType, 
-      manager: ClassPlusInitializationManager;
+      org_icdevs_class_plus_manager: ClassPlusInitializationManager;
       initialState: S;
       constructor: (<system>(?S, Principal, Principal, ?A, ?E, ((S)->())) -> T);
       args: ?A;
@@ -189,8 +214,8 @@ module{
         case(null) debug if(debug_channel) Debug.print("Pull Environment Not Set");
       };
 
-    let caller = config.manager.owner;
-    let canister = config.manager.canister;
+    let caller = config.org_icdevs_class_plus_manager.owner;
+    let canister = config.org_icdevs_class_plus_manager.canister;
 
     var _value : ?T = null;
     var _thisEnvironment : ?E = null;
@@ -247,18 +272,9 @@ module{
       };
     };
 
-    public let tracker = config.manager;
+    public let tracker = config.org_icdevs_class_plus_manager;
 
-    if(tracker.auto){
-      switch(tracker.timer){
-        case(null){
-            tracker.timer := ?Timer.setTimer<system>(#nanoseconds(0), func () : async () {
-            await* tracker.initialize();
-          });
-        };
-        case(_){};
-      };
-    };
+   
 
     tracker.calls.add(initialize)
   };

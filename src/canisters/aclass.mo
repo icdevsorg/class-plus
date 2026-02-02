@@ -42,8 +42,8 @@ module {
 
   
 
-  public func Init<system>(config : {
-      manager: ClassPlusLib.ClassPlusInitializationManager;
+  public func Init(config : {
+      org_icdevs_class_plus_manager: ClassPlusLib.ClassPlusInitializationManager;
       initialState: State;
       args : ?InitArgs;
       pullEnvironment : ?(() -> Environment);
@@ -51,7 +51,7 @@ module {
       onStorageChange : ((State) ->())
     }) :()-> AClass{
 
-      ClassPlusLib.ClassPlus<system,
+      ClassPlusLib.ClassPlus<
         AClass, 
         State,
         InitArgs,

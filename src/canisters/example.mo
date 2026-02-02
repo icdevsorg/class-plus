@@ -12,12 +12,12 @@ shared ({ caller = _owner }) persistent actor class Token  () = this{
   type InitArgs = AClassLib.InitArgs;
   type Environment = AClassLib.Environment;
 
-  transient let initManager = ClassPlus.ClassPlusInitializationManager(_owner, Principal.fromActor(this), true);
+  transient let initManager = ClassPlus.ClassPlusInitializationManager<system>(_owner, Principal.fromActor(this), true);
 
   var aClass_state : State = AClassLib.initialState();
 
-  transient let aClass = AClassLib.Init<system>({
-    manager = initManager;
+  transient let aClass = AClassLib.Init({
+    org_icdevs_class_plus_manager = initManager;
     initialState = aClass_state;
     args = ?({messageModifier = "Hello World"});
     pullEnvironment = ?(func() : Environment {

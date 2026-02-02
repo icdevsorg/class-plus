@@ -17,7 +17,7 @@ shared ({ caller = _owner }) persistent actor class Token  () = this{
   var aClass_state : State = AClassLib.initialState();
 
   transient let aClass = AClassLib.Init<system>({
-    manager = initManager;
+    org_icdevs_class_plus_manager = initManager;
     initialState = aClass_state;
     args = ?({messageModifier = "Hello World"});
     pullEnvironment = ?(func() : Environment {
