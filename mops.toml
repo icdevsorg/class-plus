@@ -7,7 +7,7 @@ fuzz = "0.2.1"
 
 [package]
 name = "class-plus"
-version = "0.1.0"
+version = "0.2.0"
 description = "Class Plus Helper - Initialization patterns and mixins for Motoko actors"
 repository = "https://github.com/icdevsorg/class-plus"
 keywords = [ "class", "motoko", "helper", "mixin", "initialization" ]
